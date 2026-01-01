@@ -1,0 +1,8 @@
+
+{
+  "name": "DreamWeaver: Taikasatukirja",
+  "description": "Interaktiivinen tarinakokemus lapsille, joka luo mukautettuja tarinoita, eloisia kuvituksia ja kerrontaa Gemini-malleilla.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
