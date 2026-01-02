@@ -8,26 +8,30 @@ An interactive AI-powered story generator built with React, TypeScript, and Goog
 
 🌐 **Live Demo:** [kids.voon.fi](https://kids.voon.fi)
 
+## 🔒 Security
+
+**IMPORTANT:** API keys are NEVER stored in code or repository.  
+All sensitive keys are managed through **Vercel Environment Variables only**.
+
+See [SECURITY.md](SECURITY.md) for detailed security guidelines.
+
 ## 🚀 Run Locally
 
 **Prerequisites:** Node.js (v18 or higher)
+
+**Note:** This app is designed for Vercel deployment. Local development requires API key setup in Vercel or temporary environment variables.
 
 1. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Set the `GEMINI_API_KEY` in `.env.local`:
-   ```
-   GEMINI_API_KEY=your_api_key_here
-   ```
-
-3. Run the development server:
+2. Run the development server:
    ```bash
    npm run dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## 📦 Deploy to Vercel
 
