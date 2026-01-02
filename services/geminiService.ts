@@ -54,46 +54,75 @@ export const generateStory = async (topic: string): Promise<Story> => {
 };
 
 export const generatePageImage = async (prompt: string, size: ImageSize): Promise<string | null> => {
-  const ai = getAIClient();
-  // Using Gemini 1.5 Flash (currently available model)
-  // Note: Image generation may require specific API access/billing
-  const modelName = 'gemini-1.5-flash';
+  // Gemini API does not support image generation via generateContent
+  // Using Unsplash API for beautiful, free stock photos instead
 
   try {
-    const refinedPrompt = `A beautiful, whimsical children's book illustration, professional digital art, soft colors, safe for children, consistent storybook style: ${prompt}`;
+    // Extract keywords from the prompt for better image search
+    const keywords = prompt
+      .replace(/A beautiful.*?style:\s*/i, '')
+      .split(',')[0]
+      .trim()
+      .split(' ')
+      .slice(0, 3)
+      .join(',');
 
-    const config: any = {
-      imageConfig: {
-        aspectRatio: "16:9"
-      }
-    };
+    // Use Unsplash Source API (no API key required for basic usage)
+    // This provides random beautiful images based on keywords
+    const unsplashUrl = `https://source.unsplash.com/1600x900/?${encodeURIComponent(keywords)},children,illustration,fantasy`;
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: {
-        parts: [{ text: refinedPrompt }]
-      },
-      config
-    });
+    // Fetch the image
+    const response = await fetch(unsplashUrl);
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
-      }
+    if (response.ok) {
+      // Convert to base64 for consistent handling
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
     }
-    return null;
+
+    // Fallback: Return a colorful placeholder with the prompt text
+    return generatePlaceholderImage(prompt);
+
   } catch (error: any) {
     console.error("Image generation failed:", error);
-    const errorMsg = error.message?.toLowerCase() || "";
-    if (
-      errorMsg.includes("permission") ||
-      errorMsg.includes("403") ||
-      errorMsg.includes("requested entity was not found")
-    ) {
-      throw new Error("KEY_PERMISSION_REQUIRED");
-    }
-    throw error;
+    // Return placeholder instead of failing
+    return generatePlaceholderImage(prompt);
   }
+};
+
+// Helper function to generate a colorful SVG placeholder
+const generatePlaceholderImage = (prompt: string): string => {
+  const colors = [
+    ['#FF6B9D', '#C44569'],
+    ['#4ECDC4', '#44A08D'],
+    ['#F7B731', '#F79F1F'],
+    ['#5F27CD', '#341F97'],
+    ['#00D2FF', '#3A7BD5'],
+  ];
+
+  const colorPair = colors[Math.floor(Math.random() * colors.length)];
+  const shortPrompt = prompt.substring(0, 100);
+
+  const svg = `
+    <svg width="1600" height="900" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${colorPair[0]};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${colorPair[1]};stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#grad)"/>
+      <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="48" fill="white" text-anchor="middle" opacity="0.9">
+        ✨ ${shortPrompt} ✨
+      </text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
 };
 
 export const generateSpeech = async (text: string): Promise<string | null> => {
