@@ -21,7 +21,7 @@ export const getAIClient = () => {
 export const generateStory = async (topic: string): Promise<Story> => {
   const ai = getAIClient();
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: 'gemini-2.0-flash-exp',
     contents: `Kirjoita lyhyt satu lapsille aiheesta: ${topic}. 
     Tarinan tulee olla jaettu tasan 4 sivulle. 
     Jokaisella sivulla tulee olla 'text' (suomeksi, 1-3 lausetta) ja 'imagePrompt' (yksityiskohtainen kuvauskuvaus englanniksi tekoälykuvageneraattorille).
@@ -55,10 +55,9 @@ export const generateStory = async (topic: string): Promise<Story> => {
 
 export const generatePageImage = async (prompt: string, size: ImageSize): Promise<string | null> => {
   const ai = getAIClient();
-  // Käytetään Pro-mallia vain jos käyttäjä haluaa 2K tai 4K, muuten Flash-malli on varmempi lupien suhteen
-  const modelName = (size === ImageSize.SIZE_2K || size === ImageSize.SIZE_4K)
-    ? 'gemini-3-pro-image-preview'
-    : 'gemini-2.5-flash-image';
+  // Using Gemini 1.5 Flash (currently available model)
+  // Note: Image generation may require specific API access/billing
+  const modelName = 'gemini-1.5-flash';
 
   try {
     const refinedPrompt = `A beautiful, whimsical children's book illustration, professional digital art, soft colors, safe for children, consistent storybook style: ${prompt}`;
@@ -68,10 +67,6 @@ export const generatePageImage = async (prompt: string, size: ImageSize): Promis
         aspectRatio: "16:9"
       }
     };
-
-    if (modelName === 'gemini-3-pro-image-preview') {
-      config.imageConfig.imageSize = size;
-    }
 
     const response = await ai.models.generateContent({
       model: modelName,
@@ -104,7 +99,7 @@ export const generatePageImage = async (prompt: string, size: ImageSize): Promis
 export const generateSpeech = async (text: string): Promise<string | null> => {
   const ai = getAIClient();
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-preview-tts",
+    model: "gemini-1.5-flash",
     contents: [{ parts: [{ text: `Lue tämä lapselle lämpimällä ja rauhallisella sadunkertojan äänellä suomeksi: ${text}` }] }],
     config: {
       responseModalities: [Modality.AUDIO],
