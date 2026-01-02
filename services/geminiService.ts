@@ -3,7 +3,19 @@ import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/ge
 import { Story, ImageSize } from "../types";
 
 export const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Vite uses import.meta.env for environment variables
+  // Check multiple sources for the API key
+  const apiKey =
+    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+    (import.meta as any).env?.GEMINI_API_KEY ||
+    (process.env as any).GEMINI_API_KEY ||
+    (process.env as any).API_KEY;
+
+  if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+    throw new Error('GEMINI_API_KEY is not configured. Please add it to your environment variables.');
+  }
+
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateStory = async (topic: string): Promise<Story> => {
@@ -44,13 +56,13 @@ export const generateStory = async (topic: string): Promise<Story> => {
 export const generatePageImage = async (prompt: string, size: ImageSize): Promise<string | null> => {
   const ai = getAIClient();
   // Käytetään Pro-mallia vain jos käyttäjä haluaa 2K tai 4K, muuten Flash-malli on varmempi lupien suhteen
-  const modelName = (size === ImageSize.SIZE_2K || size === ImageSize.SIZE_4K) 
-    ? 'gemini-3-pro-image-preview' 
+  const modelName = (size === ImageSize.SIZE_2K || size === ImageSize.SIZE_4K)
+    ? 'gemini-3-pro-image-preview'
     : 'gemini-2.5-flash-image';
 
   try {
     const refinedPrompt = `A beautiful, whimsical children's book illustration, professional digital art, soft colors, safe for children, consistent storybook style: ${prompt}`;
-    
+
     const config: any = {
       imageConfig: {
         aspectRatio: "16:9"
@@ -79,8 +91,8 @@ export const generatePageImage = async (prompt: string, size: ImageSize): Promis
     console.error("Image generation failed:", error);
     const errorMsg = error.message?.toLowerCase() || "";
     if (
-      errorMsg.includes("permission") || 
-      errorMsg.includes("403") || 
+      errorMsg.includes("permission") ||
+      errorMsg.includes("403") ||
       errorMsg.includes("requested entity was not found")
     ) {
       throw new Error("KEY_PERMISSION_REQUIRED");
@@ -108,7 +120,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
   return base64Audio || null;
 };
 
-export const sendChatMessage = async (history: {role: 'user'|'model', text: string}[], message: string) => {
+export const sendChatMessage = async (history: { role: 'user' | 'model', text: string }[], message: string) => {
   const ai = getAIClient();
   const chat = ai.chats.create({
     model: 'gemini-3-pro-preview',
@@ -116,7 +128,7 @@ export const sendChatMessage = async (history: {role: 'user'|'model', text: stri
       systemInstruction: "Olet ystävällinen Tarinakaveri lapselle, joka käyttää satukirjasovellusta. Ole kannustava, leikkisä ja selitä asiat yksinkertaisesti. Vastaa aina suomeksi. Pidä vastaukset lyhyinä."
     }
   });
-  
+
   const response = await chat.sendMessage({ message });
   return response.text;
 };

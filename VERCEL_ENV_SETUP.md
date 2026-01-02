@@ -69,6 +69,9 @@
 GEMINI_API_KEY
 ```
 
+**ÖNEMLİ:** Vercel'de `GEMINI_API_KEY` kullanın (VITE_ prefix'i olmadan).
+Build sırasında Vite config otomatik olarak bu değişkeni uygulamaya enjekte edecek.
+
 ### Variable Value
 ```
 AIzaSy...........................
