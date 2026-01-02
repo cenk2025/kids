@@ -54,72 +54,108 @@ export const generateStory = async (topic: string): Promise<Story> => {
 };
 
 export const generatePageImage = async (prompt: string, size: ImageSize): Promise<string | null> => {
-  const ai = getAIClient();
+  // Note: Imagen 3 is not currently available in the Google GenAI SDK v1beta
+  // Using beautiful, themed SVG placeholders instead
+  // These provide a professional, colorful visual experience for the story
 
   try {
-    // Using Imagen 3 (nano banana) - Google's image generation model
-    const refinedPrompt = `A beautiful, whimsical children's book illustration, professional digital art, soft colors, safe for children, consistent storybook style: ${prompt}`;
-
-    // Use Imagen 3 model
-    const response = await ai.models.generateContent({
-      model: 'imagen-3.0-generate-001',
-      contents: refinedPrompt,
-      config: {
-        responseModalities: [Modality.IMAGE] as any,
-      } as any
-    });
-
-    // Extract image data
-    const parts = response.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-      }
-    }
-
-    console.warn("No image in response, using placeholder");
-    return generatePlaceholderImage(prompt);
+    // Generate a themed placeholder based on the prompt
+    return generateThemedPlaceholder(prompt);
 
   } catch (error: any) {
-    console.error("Imagen generation failed:", error);
-
-    const errorMsg = error.message?.toLowerCase() || "";
-    if (errorMsg.includes("permission") || errorMsg.includes("403") || errorMsg.includes("billing")) {
-      console.warn("Imagen requires billing. Using placeholder.");
-    } else if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-      console.warn("Imagen model unavailable. Using placeholder.");
-    } else if (errorMsg.includes("quota") || errorMsg.includes("429")) {
-      console.warn("Imagen quota exceeded. Using placeholder.");
-    }
-
-    return generatePlaceholderImage(prompt);
+    console.error("Image generation failed:", error);
+    return generateThemedPlaceholder(prompt);
   }
 };
 
-// Helper function to generate a colorful SVG placeholder
-const generatePlaceholderImage = (prompt: string): string => {
-  const colors = [
-    ['#FF6B9D', '#C44569'],
-    ['#4ECDC4', '#44A08D'],
-    ['#F7B731', '#F79F1F'],
-    ['#5F27CD', '#341F97'],
-    ['#00D2FF', '#3A7BD5'],
-  ];
+// Generate beautiful themed SVG placeholders
+const generateThemedPlaceholder = (prompt: string): string => {
+  // Extract theme keywords from prompt
+  const lowerPrompt = prompt.toLowerCase();
 
-  const colorPair = colors[Math.floor(Math.random() * colors.length)];
-  const shortPrompt = prompt.substring(0, 100);
+  // Theme detection
+  let theme = 'default';
+  let colors = ['#667eea', '#764ba2']; // Default purple
+  let emoji = '✨';
 
+  if (lowerPrompt.includes('space') || lowerPrompt.includes('avaruus') || lowerPrompt.includes('täht')) {
+    theme = 'space';
+    colors = ['#0f2027', '#203a43', '#2c5364'];
+    emoji = '🚀';
+  } else if (lowerPrompt.includes('forest') || lowerPrompt.includes('metsä') || lowerPrompt.includes('puu')) {
+    theme = 'forest';
+    colors = ['#134e5e', '#71b280'];
+    emoji = '🌲';
+  } else if (lowerPrompt.includes('ocean') || lowerPrompt.includes('meri') || lowerPrompt.includes('vesi')) {
+    theme = 'ocean';
+    colors = ['#2E3192', '#1BFFFF'];
+    emoji = '🌊';
+  } else if (lowerPrompt.includes('magic') || lowerPrompt.includes('taika') || lowerPrompt.includes('wizard')) {
+    theme = 'magic';
+    colors = ['#8E2DE2', '#4A00E0'];
+    emoji = '🔮';
+  } else if (lowerPrompt.includes('animal') || lowerPrompt.includes('eläin') || lowerPrompt.includes('cat') || lowerPrompt.includes('dog')) {
+    theme = 'animal';
+    colors = ['#f093fb', '#f5576c'];
+    emoji = '🐾';
+  } else if (lowerPrompt.includes('castle') || lowerPrompt.includes('linna') || lowerPrompt.includes('princess')) {
+    theme = 'castle';
+    colors = ['#fa709a', '#fee140'];
+    emoji = '🏰';
+  } else {
+    // Random colorful theme
+    const themes = [
+      { colors: ['#FF6B9D', '#C44569'], emoji: '💖' },
+      { colors: ['#4ECDC4', '#44A08D'], emoji: '🌟' },
+      { colors: ['#F7B731', '#F79F1F'], emoji: '☀️' },
+      { colors: ['#5F27CD', '#341F97'], emoji: '🎨' },
+      { colors: ['#00D2FF', '#3A7BD5'], emoji: '🎪' },
+    ];
+    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+    colors = randomTheme.colors;
+    emoji = randomTheme.emoji;
+  }
+
+  // Create a short, clean prompt text
+  const shortPrompt = prompt
+    .replace(/A beautiful.*?style:\s*/i, '')
+    .substring(0, 80);
+
+  // Generate SVG with theme
   const svg = `
     <svg width="1600" height="900" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:${colorPair[0]};stop-opacity:1" />
-          <stop offset="100%" style="stop-color:${colorPair[1]};stop-opacity:1" />
+          ${colors.map((color, i) =>
+    `<stop offset="${i * (100 / (colors.length - 1))}%" style="stop-color:${color};stop-opacity:1" />`
+  ).join('\n          ')}
         </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
       </defs>
       <rect width="1600" height="900" fill="url(#grad)"/>
-      <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="48" fill="white" text-anchor="middle" opacity="0.9">
-        ✨ ${shortPrompt} ✨
+      
+      <!-- Decorative circles -->
+      <circle cx="200" cy="200" r="150" fill="white" opacity="0.1"/>
+      <circle cx="1400" cy="700" r="200" fill="white" opacity="0.1"/>
+      <circle cx="800" cy="450" r="100" fill="white" opacity="0.05"/>
+      
+      <!-- Emoji decoration -->
+      <text x="50%" y="35%" font-size="120" text-anchor="middle" opacity="0.3">${emoji}</text>
+      
+      <!-- Main text -->
+      <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="white" text-anchor="middle" filter="url(#glow)">
+        ${shortPrompt}
+      </text>
+      
+      <!-- Subtitle -->
+      <text x="50%" y="60%" font-family="Arial, sans-serif" font-size="28" fill="white" text-anchor="middle" opacity="0.8">
+        Taikasatukirja ✨
       </text>
     </svg>
   `;
