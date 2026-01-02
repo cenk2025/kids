@@ -54,42 +54,44 @@ export const generateStory = async (topic: string): Promise<Story> => {
 };
 
 export const generatePageImage = async (prompt: string, size: ImageSize): Promise<string | null> => {
-  // Gemini API does not support image generation via generateContent
-  // Using Unsplash API for beautiful, free stock photos instead
+  const ai = getAIClient();
 
   try {
-    // Extract keywords from the prompt for better image search
-    const keywords = prompt
-      .replace(/A beautiful.*?style:\s*/i, '')
-      .split(',')[0]
-      .trim()
-      .split(' ')
-      .slice(0, 3)
-      .join(',');
+    // Using Imagen 3 (nano banana) - Google's image generation model
+    const refinedPrompt = `A beautiful, whimsical children's book illustration, professional digital art, soft colors, safe for children, consistent storybook style: ${prompt}`;
 
-    // Use Unsplash Source API (no API key required for basic usage)
-    // This provides random beautiful images based on keywords
-    const unsplashUrl = `https://source.unsplash.com/1600x900/?${encodeURIComponent(keywords)},children,illustration,fantasy`;
+    // Use Imagen 3 model
+    const response = await ai.models.generateContent({
+      model: 'imagen-3.0-generate-001',
+      contents: refinedPrompt,
+      config: {
+        responseModalities: [Modality.IMAGE] as any,
+      } as any
+    });
 
-    // Fetch the image
-    const response = await fetch(unsplashUrl);
-
-    if (response.ok) {
-      // Convert to base64 for consistent handling
-      const blob = await response.blob();
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
+    // Extract image data
+    const parts = response.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
+      if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
     }
 
-    // Fallback: Return a colorful placeholder with the prompt text
+    console.warn("No image in response, using placeholder");
     return generatePlaceholderImage(prompt);
 
   } catch (error: any) {
-    console.error("Image generation failed:", error);
-    // Return placeholder instead of failing
+    console.error("Imagen generation failed:", error);
+
+    const errorMsg = error.message?.toLowerCase() || "";
+    if (errorMsg.includes("permission") || errorMsg.includes("403") || errorMsg.includes("billing")) {
+      console.warn("Imagen requires billing. Using placeholder.");
+    } else if (errorMsg.includes("404") || errorMsg.includes("not found")) {
+      console.warn("Imagen model unavailable. Using placeholder.");
+    } else if (errorMsg.includes("quota") || errorMsg.includes("429")) {
+      console.warn("Imagen quota exceeded. Using placeholder.");
+    }
+
     return generatePlaceholderImage(prompt);
   }
 };
