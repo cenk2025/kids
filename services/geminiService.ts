@@ -54,74 +54,102 @@ export const generateStory = async (topic: string): Promise<Story> => {
 };
 
 export const generatePageImage = async (prompt: string, size: ImageSize): Promise<string | null> => {
-  // Note: Imagen 3 is not currently available in the Google GenAI SDK v1beta
-  // Using beautiful, themed SVG placeholders instead
-  // These provide a professional, colorful visual experience for the story
+  const ai = getAIClient();
 
-  try {
-    // Generate a themed placeholder based on the prompt
-    return generateThemedPlaceholder(prompt);
+  // Try multiple potential "Nano Banana" and Imagen model names
+  const modelsToTry = [
+    'gemini-3-pro-image-preview', // Nano Banana Pro
+    'gemini-2.5-flash-image',     // Nano Banana
+    'imagen-3.0-generate-001',
+    'imagen-3.0-fast-generate-001'
+  ];
 
-  } catch (error: any) {
-    console.error("Image generation failed:", error);
-    return generateThemedPlaceholder(prompt);
+  const refinedPrompt = `A beautiful, whimsical children's book illustration, professional digital art, soft colors, safe for children, consistent storybook style: ${prompt}`;
+
+  // Try each model until one succeeds
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`Attempting image generation with model: ${modelName}`);
+
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: {
+          parts: [{ text: refinedPrompt }]
+        },
+        config: {
+          // Using any to avoid TS errors for preview features
+          responseModalities: ['image'] as any
+        }
+      });
+
+      // Extract the image data from the response
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.mimeType?.startsWith('image/')) {
+          console.log(`Successfully generated image with ${modelName}`);
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    } catch (error: any) {
+      console.warn(`Image generation failed with ${modelName}:`, error.message);
+      // Continue to next model
+    }
   }
+
+  // Final fallback to themed placeholders if all AI models fail
+  console.warn("All AI image generation attempts failed. Falling back to themed placeholders.");
+  return generateVisualPlaceholder(prompt);
 };
 
-// Generate beautiful themed SVG placeholders
-const generateThemedPlaceholder = (prompt: string): string => {
-  // Extract theme keywords from prompt
+// Generate beautiful visual-only SVG placeholders (no text)
+const generateVisualPlaceholder = (prompt: string): string => {
   const lowerPrompt = prompt.toLowerCase();
 
   // Theme detection
-  let theme = 'default';
-  let colors = ['#667eea', '#764ba2']; // Default purple
-  let emoji = '✨';
+  let colors = ['#667eea', '#764ba2'];
+  let mainEmoji = '✨';
+  let decorEmojis = ['⭐', '💫', '🌟'];
 
   if (lowerPrompt.includes('space') || lowerPrompt.includes('avaruus') || lowerPrompt.includes('täht')) {
-    theme = 'space';
     colors = ['#0f2027', '#203a43', '#2c5364'];
-    emoji = '🚀';
+    mainEmoji = '🚀';
+    decorEmojis = ['⭐', '🌟', '✨', '🌙'];
   } else if (lowerPrompt.includes('forest') || lowerPrompt.includes('metsä') || lowerPrompt.includes('puu')) {
-    theme = 'forest';
     colors = ['#134e5e', '#71b280'];
-    emoji = '🌲';
+    mainEmoji = '🌲';
+    decorEmojis = ['🍃', '🌿', '🦋', '🐿️'];
   } else if (lowerPrompt.includes('ocean') || lowerPrompt.includes('meri') || lowerPrompt.includes('vesi')) {
-    theme = 'ocean';
     colors = ['#2E3192', '#1BFFFF'];
-    emoji = '🌊';
+    mainEmoji = '🌊';
+    decorEmojis = ['🐚', '🐠', '🦈', '⛵'];
   } else if (lowerPrompt.includes('magic') || lowerPrompt.includes('taika') || lowerPrompt.includes('wizard')) {
-    theme = 'magic';
     colors = ['#8E2DE2', '#4A00E0'];
-    emoji = '🔮';
+    mainEmoji = '🔮';
+    decorEmojis = ['✨', '⭐', '🌟', '💫'];
   } else if (lowerPrompt.includes('animal') || lowerPrompt.includes('eläin') || lowerPrompt.includes('cat') || lowerPrompt.includes('dog')) {
-    theme = 'animal';
     colors = ['#f093fb', '#f5576c'];
-    emoji = '🐾';
+    mainEmoji = '🐾';
+    decorEmojis = ['🐱', '🐶', '🦊', '🐻'];
   } else if (lowerPrompt.includes('castle') || lowerPrompt.includes('linna') || lowerPrompt.includes('princess')) {
-    theme = 'castle';
     colors = ['#fa709a', '#fee140'];
-    emoji = '🏰';
+    mainEmoji = '🏰';
+    decorEmojis = ['👑', '💎', '🌹', '⭐'];
   } else {
     // Random colorful theme
     const themes = [
-      { colors: ['#FF6B9D', '#C44569'], emoji: '💖' },
-      { colors: ['#4ECDC4', '#44A08D'], emoji: '🌟' },
-      { colors: ['#F7B731', '#F79F1F'], emoji: '☀️' },
-      { colors: ['#5F27CD', '#341F97'], emoji: '🎨' },
-      { colors: ['#00D2FF', '#3A7BD5'], emoji: '🎪' },
+      { colors: ['#FF6B9D', '#C44569'], mainEmoji: '💖', decorEmojis: ['💕', '💗', '💝', '💓'] },
+      { colors: ['#4ECDC4', '#44A08D'], mainEmoji: '🌟', decorEmojis: ['✨', '⭐', '💫', '🌠'] },
+      { colors: ['#F7B731', '#F79F1F'], mainEmoji: '☀️', decorEmojis: ['🌞', '🌻', '🌼', '🌺'] },
+      { colors: ['#5F27CD', '#341F97'], mainEmoji: '🎨', decorEmojis: ['🎭', '🎪', '🎡', '🎠'] },
+      { colors: ['#00D2FF', '#3A7BD5'], mainEmoji: '🎪', decorEmojis: ['🎈', '🎉', '🎊', '🎁'] },
     ];
     const randomTheme = themes[Math.floor(Math.random() * themes.length)];
     colors = randomTheme.colors;
-    emoji = randomTheme.emoji;
+    mainEmoji = randomTheme.mainEmoji;
+    decorEmojis = randomTheme.decorEmojis;
   }
 
-  // Create a short, clean prompt text
-  const shortPrompt = prompt
-    .replace(/A beautiful.*?style:\s*/i, '')
-    .substring(0, 80);
-
-  // Generate SVG with theme
+  // Generate visual-only SVG (no text)
   const svg = `
     <svg width="1600" height="900" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -131,32 +159,38 @@ const generateThemedPlaceholder = (prompt: string): string => {
   ).join('\n          ')}
         </linearGradient>
         <filter id="glow">
-          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
       </defs>
+      
+      <!-- Background -->
       <rect width="1600" height="900" fill="url(#grad)"/>
       
       <!-- Decorative circles -->
-      <circle cx="200" cy="200" r="150" fill="white" opacity="0.1"/>
-      <circle cx="1400" cy="700" r="200" fill="white" opacity="0.1"/>
-      <circle cx="800" cy="450" r="100" fill="white" opacity="0.05"/>
+      <circle cx="300" cy="250" r="180" fill="white" opacity="0.08"/>
+      <circle cx="1300" cy="650" r="220" fill="white" opacity="0.08"/>
+      <circle cx="800" cy="450" r="150" fill="white" opacity="0.05"/>
+      <circle cx="1200" cy="300" r="120" fill="white" opacity="0.06"/>
+      <circle cx="400" cy="700" r="160" fill="white" opacity="0.07"/>
       
-      <!-- Emoji decoration -->
-      <text x="50%" y="35%" font-size="120" text-anchor="middle" opacity="0.3">${emoji}</text>
+      <!-- Main emoji (large, centered) -->
+      <text x="50%" y="45%" font-size="280" text-anchor="middle" filter="url(#glow)">${mainEmoji}</text>
       
-      <!-- Main text -->
-      <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="white" text-anchor="middle" filter="url(#glow)">
-        ${shortPrompt}
-      </text>
+      <!-- Decorative emojis (smaller, scattered) -->
+      <text x="20%" y="25%" font-size="80" opacity="0.6">${decorEmojis[0]}</text>
+      <text x="80%" y="30%" font-size="90" opacity="0.5">${decorEmojis[1]}</text>
+      <text x="15%" y="75%" font-size="85" opacity="0.55">${decorEmojis[2]}</text>
+      <text x="85%" y="80%" font-size="75" opacity="0.6">${decorEmojis[3] || decorEmojis[0]}</text>
       
-      <!-- Subtitle -->
-      <text x="50%" y="60%" font-family="Arial, sans-serif" font-size="28" fill="white" text-anchor="middle" opacity="0.8">
-        Taikasatukirja ✨
-      </text>
+      <!-- Additional small decorative elements -->
+      <circle cx="600" cy="200" r="8" fill="white" opacity="0.4"/>
+      <circle cx="1000" cy="700" r="10" fill="white" opacity="0.3"/>
+      <circle cx="400" cy="400" r="6" fill="white" opacity="0.5"/>
+      <circle cx="1200" cy="500" r="7" fill="white" opacity="0.4"/>
     </svg>
   `;
 
