@@ -7,12 +7,11 @@ export const getAIClient = () => {
   // Check multiple sources for the API key
   const apiKey =
     (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-    (import.meta as any).env?.GEMINI_API_KEY ||
-    (process.env as any).GEMINI_API_KEY ||
-    (process.env as any).API_KEY;
+    (import.meta as any).env?.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
-    throw new Error('GEMINI_API_KEY is not configured. Please add it to your environment variables.');
+    console.warn('GEMINI_API_KEY is not configured. Running in DEMO MODE.');
+    return null;
   }
 
   return new GoogleGenAI({ apiKey });
@@ -20,6 +19,30 @@ export const getAIClient = () => {
 
 export const generateStory = async (topic: string): Promise<Story> => {
   const ai = getAIClient();
+  if (!ai) {
+    return {
+      title: `Taikaseikkailu: ${topic}`,
+      pages: [
+        {
+          text: `Olipa kerran ${topic}, joka asui kaukaisessa satumaassa.`,
+          imagePrompt: `A whimsical children's book illustration of ${topic} in a magical land`
+        },
+        {
+          text: `Eräänä päivänä se löysi suuren, kimaltelevan esineen.`,
+          imagePrompt: `A glowing magical object in a fairy forest`
+        },
+        {
+          text: `Kun se kosketti esinettä, koko maailma täyttyi väreillä!`,
+          imagePrompt: `Explosion of colors and sparkles in a magical landscape`
+        },
+        {
+          text: `Ja niin alkoi suurin seikkailu, jonka maailma on koskaan nähnyt.`,
+          imagePrompt: `A long winding road leading to a golden castle in the clouds`
+        }
+      ]
+    };
+  }
+
   const response = await ai.models.generateContent({
     model: 'gemini-2.0-flash-exp',
     contents: `Kirjoita lyhyt satu lapsille aiheesta: ${topic}. 
@@ -199,6 +222,7 @@ const generateVisualPlaceholder = (prompt: string): string => {
 
 export const generateSpeech = async (text: string): Promise<string | null> => {
   const ai = getAIClient();
+  if (!ai) return null;
   const response = await ai.models.generateContent({
     model: "gemini-1.5-flash",
     contents: [{ parts: [{ text: `Lue tämä lapselle lämpimällä ja rauhallisella sadunkertojan äänellä suomeksi: ${text}` }] }],
@@ -218,6 +242,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
 
 export const sendChatMessage = async (history: { role: 'user' | 'model', text: string }[], message: string) => {
   const ai = getAIClient();
+  if (!ai) return "Hei! Olen Tarinakaveri. Koska API-avainta ei ole asetettu, olen demo-tilassa, mutta voimme silti keksiä kivoja juttuja!";
   const chat = ai.chats.create({
     model: 'gemini-3-pro-preview',
     config: {

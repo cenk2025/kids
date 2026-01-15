@@ -17,9 +17,7 @@ const ApiKeyGate: React.FC<ApiKeyGateProps> = ({ children }) => {
     // Check if we have an environment variable API key (for Vercel/production)
     const envApiKey =
       (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-      (import.meta as any).env?.GEMINI_API_KEY ||
-      (process.env as any).GEMINI_API_KEY ||
-      (process.env as any).API_KEY;
+      (import.meta as any).env?.GEMINI_API_KEY;
 
     if (envApiKey && envApiKey !== 'PLACEHOLDER_API_KEY') {
       setHasKey(true);
@@ -57,7 +55,7 @@ const ApiKeyGate: React.FC<ApiKeyGateProps> = ({ children }) => {
           <p className="text-gray-600 mb-6">
             {isAIStudio
               ? 'Luodaksesi upeita kuvituksia, sinun on valittava API-avain maksullisesta Google Cloud -projektista.'
-              : 'API-avain puuttuu. Ota yhteyttä ylläpitäjään.'}
+              : 'API-avain puuttuu. Voit kuitenkin kokeilla sovellusta demo-tilassa!'}
           </p>
           {isAIStudio ? (
             <>
@@ -76,14 +74,22 @@ const ApiKeyGate: React.FC<ApiKeyGateProps> = ({ children }) => {
               </button>
             </>
           ) : (
-            <a
-              href="https://aistudio.google.com/app/apikey"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 shadow-lg"
-            >
-              Hanki API-avain
-            </a>
+            <div className="space-y-4">
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 shadow-lg"
+              >
+                Hanki API-avain
+              </a>
+              <button
+                onClick={() => setHasKey(true)}
+                className="w-full bg-pink-100 hover:bg-pink-200 text-pink-600 font-bold py-4 px-8 rounded-2xl transition-all"
+              >
+                Jatka Demo-tilassa ✨
+              </button>
+            </div>
           )}
         </div>
       </div>
